@@ -1,0 +1,210 @@
+﻿'use client';
+
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+
+export interface RegistroCertificateInput {
+  // Dados do anúncio (já retornados pela rota /api/anuncios/generate-pdf)
+  title: string;
+  mlbCode: string;
+  permalink?: string;
+  account?: {
+    nickname?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  };
+  // Dados informados no formulário
+  autorNome?: string;
+  titularNome?: string;
+  titularCpfCnpj?: string | null;
+  // Dados do usuário autenticado (fallbacks)
+  usuario: {
+    nome: string;
+    cpfCnpj?: string | null;
+    email?: string | null;
+  };
+}
+
+function wrapText(text: string, maxWidth: number, font: any, fontSize: number): string[] {
+  const words = (text || '').split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let currentLine = '';
+  for (const word of words) {
+    const test = currentLine ? currentLine + ' ' + word : word;
+    const width = font.widthOfTextAtSize(test, fontSize);
+    if (width > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = test;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+}
+
+async function embedRemoteImage(pdfDoc: PDFDocument, url: string): Promise<any | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const arrayBuffer = await res.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    try {
+      return await pdfDoc.embedPng(bytes);
+    } catch {
+      try {
+        return await pdfDoc.embedJpg(bytes);
+      } catch {
+        return null;
+      }
+    }
+  } catch {
+    return null;
+  }
+}
+
+function safe(value: string | null | undefined): string {
+  return (value ?? '').toString().trim();
+}
+
+function formatCpfCnpj(raw?: string | null): string {
+  const digits = (raw || '').replace(/\D/g, '');
+  if (digits.length === 11) {
+    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  }
+  if (digits.length === 14) {
+    return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+  }
+  return raw ?? '—';
+}
+
+export async function generateRegistroCertificatePDF(input: RegistroCertificateInput) {
+  const pdfDoc = await PDFDocument.create();
+
+  const page = pdfDoc.addPage([842, 1191]); // A3 vertical
+  const { width, height } = page.getSize();
+
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  // Paleta (tons de azul)
+  const bg = rgb(6 / 255, 28 / 255, 48 / 255); // fundo
+  const cyan = rgb(28 / 255, 156 / 255, 203 / 255); // acentos
+  const cyanSoft = rgb(80 / 255, 196 / 255, 235 / 255);
+  const white = rgb(1, 1, 1);
+
+  // Fundo
+  page.drawRectangle({ x: 0, y: 0, width, height, color: bg });
+
+  // Elementos decorativos simples
+  page.drawEllipse({ x: width - 140, y: height - 180, xScale: 90, yScale: 90, color: rgb(0, 0.25, 0.4) });
+  page.drawEllipse({ x: width - 120, y: 280, xScale: 80, yScale: 80, color: rgb(0, 0.35, 0.55) });
+
+  // Cabeçalho: Logotipo textual
+  const logoTitle = 'CYBER';
+  const logoSubtitle = 'REGISTRO';
+  page.drawText(logoTitle, { x: 60, y: height - 90, size: 38, font: fontBold, color: cyanSoft });
+  page.drawText(logoSubtitle, { x: 60, y: height - 125, size: 20, font: fontBold, color: cyan });
+
+  // Título principal
+  const titulo = 'CERTIFICADO DE REGISTRO';
+  page.drawText(titulo, { x: 60, y: height - 220, size: 48, font: fontBold, color: white });
+
+  // Caixa de informações
+  const boxX = 60;
+  const boxY = height - 980;
+  const boxW = width - 120;
+  const boxH = 680;
+  page.drawRectangle({ x: boxX, y: boxY, width: boxW, height: boxH, color: rgb(0, 0.18, 0.3), opacity: 0.9, borderColor: rgb(0.1, 0.45, 0.65), borderWidth: 1 });
+
+  let y = boxY + boxH - 50;
+
+  // Campo: Título / Código
+  page.drawText('Titulo da Obra / Código do Anúncio', { x: boxX + 24, y, size: 16, font: fontBold, color: white });
+  y -= 28;
+  page.drawText(`${safe(input.mlbCode || input.title)}`, { x: boxX + 24, y, size: 18, font: font, color: cyanSoft });
+  y -= 40;
+
+  // Autor da Obra
+  page.drawText('Autor da Obra', { x: boxX + 24, y, size: 16, font: fontBold, color: white });
+  y -= 26;
+  const autorNomeValue = safe(input.autorNome) || safe(input.usuario?.nome) || `${safe(input.account?.firstName)} ${safe(input.account?.lastName)}`.trim() || safe(input.account?.nickname) || '—';
+  page.drawText(autorNomeValue, { x: boxX + 24, y, size: 18, font: font, color: white });
+  y -= 40;
+
+  // Titular dos Direitos
+  page.drawText('Titular dos Direitos', { x: boxX + 24, y, size: 16, font: fontBold, color: white });
+  y -= 26;
+  const titularNomeValue = safe(input.titularNome) || autorNomeValue;
+  const titularCpf = input.titularCpfCnpj ?? input.usuario?.cpfCnpj;
+  const titularLinha = `${titularNomeValue}${titularCpf ? ' - ' + formatCpfCnpj(titularCpf) : ''}`;
+  page.drawText(titularLinha, { x: boxX + 24, y, size: 18, font: font, color: white });
+  y -= 40;
+
+  // Declaração
+  const declaracao = (
+    'Este certificado atesta a declaração de autoria e registra, ' +
+    'por meio de tecnologias de hash (SHA-256), carimbo do tempo (TimeStamp) ' +
+    'e Assinatura Digital, a prioridade intelectual do conteúdo vinculado ao código. ' +
+    'Serve como garantia de proteção contra plágio e usos não autorizados.'
+  );
+  const declaracaoLines = wrapText(declaracao, boxW - 48, font, 14);
+  for (const line of declaracaoLines) {
+    page.drawText(line, { x: boxX + 24, y, size: 14, font, color: white });
+    y -= 18;
+  }
+  y -= 18;
+
+  // Observações
+  page.drawText('Observações:', { x: boxX + 24, y, size: 16, font: fontBold, color: white });
+  y -= 26;
+  const obs = (
+    'Este registro de direito e proteção autoral prove eficácia contra plágio e/ou cópia de materiais ' +
+    'contidos neste certificado, referente ao anúncio indicado.'
+  );
+  const obsLines = wrapText(obs, boxW - 48, font, 13);
+  for (const line of obsLines) {
+    page.drawText(line, { x: boxX + 24, y, size: 13, font, color: white });
+    y -= 16;
+  }
+
+  // Rodapé informativo
+  const footerY = boxY - 110;
+  const declaredAt = new Date().toISOString().replace('T', ' ').replace('Z', ' UTC');
+  const signEmail = input.usuario?.email || 'registrar@cyberregistro.com';
+  const linha1 = `Declarado em: ${declaredAt}`;
+  const linha2 = `Assinado digitalmente: ${signEmail}`;
+  const linha3 = 'Tecnologias: SHA-256 • TimeStamp • Assinatura Digital';
+  const linha4 = 'Referência legal: Lei 9.610/98 • WIPO • Convenção de Berna';
+
+  page.drawText(linha1, { x: boxX + 2, y: footerY + 70, size: 12, font, color: white });
+  page.drawText(linha2, { x: boxX + 2, y: footerY + 48, size: 12, font, color: white });
+  page.drawText(linha3, { x: boxX + 2, y: footerY + 26, size: 12, font, color: white });
+  page.drawText(linha4, { x: boxX + 2, y: footerY + 4, size: 12, font, color: white });
+
+  // QR Code apontando para o permalink do anúncio (ou código)
+  const qrData = encodeURIComponent(input.permalink || input.mlbCode || input.title || 'https://cyberregistro.com');
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${qrData}`;
+  const qrImg = await embedRemoteImage(pdfDoc, qrUrl);
+  if (qrImg) {
+    page.drawImage(qrImg, { x: width - 60 - 180, y: boxY - 40 - 180, width: 180, height: 180 });
+  }
+
+  // Assinatura no rodapé inferior
+  const rep = 'Representante CyberRegistro';
+  const repWidth = font.widthOfTextAtSize(rep, 14);
+  page.drawText(rep, { x: (width - repWidth) / 2, y: 30, size: 14, font, color: white });
+
+  // Salvar e baixar
+  const bytes = await pdfDoc.save();
+  const blob = new Blob([bytes], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  const filename = `${safe(input.mlbCode || input.title)}-certificado.pdf`;
+  link.download = filename.replace(/\s+/g, '_');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+

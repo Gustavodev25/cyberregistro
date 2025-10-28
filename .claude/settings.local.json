@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(dir /B)",
+      "Bash(psql:*)",
+      "Bash(node scripts/migrate-ml-accounts.js:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(dir /B \"c:\\Users\\Gustavo Maldanis\\Desktop\\cyber-registro\\app\\clientes\")",
+      "Read(//c/Users/Gustavo Maldanis/Downloads/**)",
+      "Bash(node scripts/migrate.js:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
