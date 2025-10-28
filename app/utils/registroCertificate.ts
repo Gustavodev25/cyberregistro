@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
@@ -688,13 +688,13 @@ export async function generateRegistroCertificatePDF(input: RegistroCertificateI
   const bytes = await pdfDoc.save();
   // Hash do PDF gerado (após conteúdo final)
   async function sha256HexBytes(bytes: Uint8Array): Promise<string> {
-    const hash = await crypto.subtle.digest('SHA-256', bytes);
+    const hash = await crypto.subtle.digest('SHA-256', bytes as BufferSource);
     return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
   }
   const certHash = await sha256HexBytes(bytes);
 
   // Download do PDF
-  const blob = new Blob([bytes], { type: 'application/pdf' });
+  const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   const fileBase = `${safe(input.mlbCode || input.title)}-certificado`.replace(/\s+/g, '_');

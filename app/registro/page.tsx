@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
@@ -26,7 +26,7 @@ interface PdfApiData {
   registroHash?: string | null;
 }
 
-export default function RegistroPage() {
+function RegistroPageContent() {
   const router = useRouter();
   const params = useSearchParams();
   const { showToast } = useToast();
@@ -932,5 +932,13 @@ export default function RegistroPage() {
         )}
       </Modal>
     </div>
+  );
+}
+
+export default function RegistroPage() {
+  return (
+    <Suspense fallback={<div>Carregando...</div>}>
+      <RegistroPageContent />
+    </Suspense>
   );
 }

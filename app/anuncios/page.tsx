@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
@@ -189,7 +189,7 @@ function FilterDropdown({
   );
 }
 
-export default function AnunciosPage() {
+function AnunciosPageContent() {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSyncModal, setShowSyncModal] = useState(false);
@@ -894,4 +894,10 @@ export default function AnunciosPage() {
   );
 }
 
-
+export default function AnunciosPage() {
+  return (
+    <Suspense fallback={<div>Carregando...</div>}>
+      <AnunciosPageContent />
+    </Suspense>
+  );
+}

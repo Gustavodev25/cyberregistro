@@ -77,7 +77,7 @@ export async function applyPaymentConfirmation(
       [paymentId],
     );
 
-    if (existing.rowCount > 0) {
+    if (existing.rowCount && existing.rowCount > 0) {
       await client.query("COMMIT");
       console.log(
         `[payments] Pagamento ${paymentId} ja processado anteriormente.`,
