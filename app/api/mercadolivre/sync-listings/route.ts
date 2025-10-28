@@ -47,7 +47,7 @@ async function fetchAllMLListings(mlUserId: string, accessToken: string): Promis
       let guard = 0;
       while (true) {
         const base = `https://api.mercadolibre.com/users/${mlUserId}/items/search?search_type=scan&limit=${limit}`;
-        const url = base + (statusParam ? `&status=${statusParam}` : '') + (scrollId ? `&scroll_id=${encodeURIComponent(scrollId)}` : '');
+        const url: string = base + (statusParam ? `&status=${statusParam}` : '') + (scrollId ? `&scroll_id=${encodeURIComponent(scrollId)}` : '');
         const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
         if (!res.ok) throw new Error('scan_not_supported');
         const data = await res.json();
