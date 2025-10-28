@@ -59,7 +59,7 @@ JWT_SECRET=sua_chave_secreta_jwt_segura
 ```
 ML_APP_ID=seu_app_id
 ML_CLIENT_SECRET=seu_client_secret
-ML_REDIRECT_URI=https://seu-dominio.vercel.app/api/auth/mercadolivre/callback
+ML_REDIRECT_URI=https://cyberregistro.vercel.app/api/auth/mercadolivre/callback
 ```
 
 #### 4. Asaas Pagamentos
@@ -71,7 +71,7 @@ ASAAS_ENV=sandbox
 
 #### 5. URL da Aplicação
 ```
-NEXT_PUBLIC_APP_URL=https://seu-dominio.vercel.app
+NEXT_PUBLIC_APP_URL=https://cyberregistro.vercel.app
 ```
 
 ### Passos para Deploy
