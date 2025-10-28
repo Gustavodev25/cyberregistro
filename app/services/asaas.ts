@@ -5,11 +5,8 @@ const sanitizeApiKey = (key: string | undefined) => {
   return trimmed.replace(/^['"]|['"]$/g, "");
 };
 
-// Chave do Asaas hardcoded conforme solicitado.
-const RAW_ASAAS_API_KEY =
-  "$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjkxZDM2NjNmLWMzMTAtNGVjZi1iZTZlLWRkMWE3YjYzMzMwNTo6JGFhY2hfNTQxMTZjOWEtMjgwNS00MDUxLTkxZWMtNGQyMDE3NmRkOWFm";
-
-const ASAAS_API_KEY = sanitizeApiKey(RAW_ASAAS_API_KEY);
+// Usar a chave de API das variáveis de ambiente
+const ASAAS_API_KEY = sanitizeApiKey(process.env.ASAAS_API_KEY);
 const ASAAS_ENV = process.env.ASAAS_ENV || "sandbox";
 const ASAAS_BASE_URL =
   ASAAS_ENV === "sandbox"
@@ -68,25 +65,19 @@ class AsaasService {
         "ASAAS_API_KEY primeiros caracteres:",
         ASAAS_API_KEY.substring(0, 10),
       );
-
-      if (RAW_ASAAS_API_KEY !== ASAAS_API_KEY) {
-        console.warn(
-          "ASAAS_API_KEY fixa foi sanitizada; verifique o valor hardcoded no arquivo app/services/asaas.ts.",
-        );
-      }
     }
 
     if (!hasApiKey) {
       throw new Error(
-        "ASAAS_API_KEY nao configurada. Verifique se o arquivo .env.local esta correto e reinicie o servidor.",
+        "ASAAS_API_KEY nao configurada. Verifique as variáveis de ambiente.",
       );
     }
 
-    // Usa a chave de API diretamente do ambiente
     this.apiKey = ASAAS_API_KEY;
     this.baseUrl = ASAAS_BASE_URL;
 
     console.log("AsaasService inicializado - Ambiente:", ASAAS_ENV);
+    console.log("AsaasService usando URL:", ASAAS_BASE_URL);
   }
 
   private async makeRequest(
