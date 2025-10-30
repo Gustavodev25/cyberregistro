@@ -71,6 +71,12 @@ export default function Cadastro() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 px-4 py-12">
       <div className="w-full max-w-md space-y-6">
+        {/* Logo fora do card */}
+        <div className="flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Logo" className="h-24 sm:h-32 w-auto" />
+        </div>
+
         {/* Card */}
         <div className="rounded-2xl border border-neutral-200 bg-white p-8">
           {/* Header */}

@@ -1,11 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import { verify } from 'jsonwebtoken';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export async function GET(req: NextRequest) {
   try {
-    // Verificar se há duplicatas e contar DISTINCT por mlb_code
+    // Autenticação e identificação do usuário
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    if (!token) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET || '';
+    let userId: string;
+    try {
+      const decoded: any = verify(token, JWT_SECRET);
+      userId = decoded?.id;
+      if (!userId) throw new Error('Token sem id');
+    } catch (error) {
+      console.error('Erro ao verificar token em listings-stats:', error);
+      return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
+    }
+
+    // Estatísticas por conta do usuário (DISTINCT por mlb_code)
     const result = await pool.query(
       `SELECT 
         ml_account_id as account_id,
@@ -14,8 +33,9 @@ export async function GET(req: NextRequest) {
         COUNT(DISTINCT mlb_code) FILTER (WHERE status = 'paused')::int as paused,
         COUNT(DISTINCT mlb_code) FILTER (WHERE status = 'under_review')::int as under_review
        FROM anuncios 
-       WHERE mlb_code IS NOT NULL
-       GROUP BY ml_account_id`
+       WHERE mlb_code IS NOT NULL AND user_id = $1
+       GROUP BY ml_account_id`,
+      [userId]
     );
 
     // Log para debug
@@ -23,7 +43,8 @@ export async function GET(req: NextRequest) {
 
     // Verificar total geral
     const totalGeral = await pool.query(
-      `SELECT COUNT(DISTINCT mlb_code)::int as total FROM anuncios WHERE mlb_code IS NOT NULL`
+      `SELECT COUNT(DISTINCT mlb_code)::int as total FROM anuncios WHERE mlb_code IS NOT NULL AND user_id = $1`,
+      [userId]
     );
     console.log('Total geral de anúncios únicos:', totalGeral.rows[0]);
 

@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
         a.registro_status,
         a.registro_gerado_em,
         a.registro_hash,
+        (a.registro_pdf_data IS NOT NULL) as has_pdf,
         ma.nickname as account_nickname,
         ma.first_name as account_first_name,
         ma.last_name as account_last_name

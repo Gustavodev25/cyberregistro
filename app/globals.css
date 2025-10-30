@@ -10,6 +10,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-montserrat);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -94,4 +95,14 @@ body {
 
 .animate-fade-in {
   animation: fade-in 0.6s ease-out forwards;
+}
+
+/* Classe utilitária para aplicar Montserrat nos títulos */
+.font-heading {
+  font-family: var(--font-montserrat);
+}
+
+/* Aplicar Montserrat automaticamente em todos os títulos h1, h2, h3 */
+h1, h2, h3 {
+  font-family: var(--font-montserrat);
 }

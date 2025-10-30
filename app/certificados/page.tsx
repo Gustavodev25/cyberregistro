@@ -4,7 +4,6 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
-import { generateRegistroCertificatePDF, RegistroCertificateInput } from '../utils/registroCertificate';
 
 interface CertItem {
   id: number;
@@ -15,6 +14,7 @@ interface CertItem {
   registro_status: string | null;
   registro_gerado_em: string | null;
   registro_hash: string | null;
+  has_pdf: boolean;
   account_nickname?: string | null;
   account_first_name?: string | null;
   account_last_name?: string | null;
@@ -72,25 +72,46 @@ function CertificadosPageContent() {
 
   const handleDownload = async (it: CertItem) => {
     try {
-      const input: RegistroCertificateInput = {
-        title: it.title,
-        mlbCode: it.mlb_code,
-        permalink: it.permalink || undefined,
-        account: {
-          nickname: it.account_nickname || undefined,
-          firstName: it.account_first_name || undefined,
-          lastName: it.account_last_name || undefined,
-        },
-        usuario: {
-          nome: usuario?.nome || 'Usuário',
-          email: usuario?.email || undefined,
-          cpfCnpj: usuario?.cpfCnpj || undefined,
-        },
-      };
-      await generateRegistroCertificatePDF(input);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      // Se o PDF ainda não foi gerado, gerar primeiro
+      if (!it.has_pdf) {
+        const generateRes = await fetch('/api/certificados/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            anuncioId: it.id,
+            userId: usuario?.id,
+          }),
+        });
+
+        if (!generateRes.ok) {
+          const errorData = await generateRes.json();
+          throw new Error(errorData.error || 'Erro ao gerar certificado');
+        }
+
+        // Atualizar o item para marcar que agora tem PDF
+        it.has_pdf = true;
+      }
+
+      // Baixar o certificado armazenado
+      const downloadUrl = `/api/certificados/download?id=${it.id}`;
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `${it.mlb_code || it.title}-certificado.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (e) {
       console.error('Erro ao baixar certificado:', e);
-      alert('Não foi possível gerar o PDF deste certificado agora.');
+      alert('Não foi possível baixar o certificado: ' + (e instanceof Error ? e.message : 'Erro desconhecido'));
     }
   };
 
@@ -187,7 +208,7 @@ function CertificadosPageContent() {
                       <div className="flex items-center gap-2 mt-2">
                         <div className="px-2 py-0.5 rounded-md bg-green-50 text-green-700 text-xs font-medium flex items-center gap-1">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                          {it.registro_status || 'protegido'}
+                          Certificado Gerado
                         </div>
                         <a href={it.permalink || '#'} target="_blank" rel="noreferrer" className="text-xs text-[#2F4F7F] hover:underline">Abrir anúncio</a>
                         <button

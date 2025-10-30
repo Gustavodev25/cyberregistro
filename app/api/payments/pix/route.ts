@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
       customerEmail,
       customerCpfCnpj,
       customerPhone,
+      cupomId,
+      cupomDiscount,
     } = body;
 
     if (!quantity || !total) {
@@ -90,13 +92,17 @@ export async function POST(request: NextRequest) {
     const dueDateString = dueDate.toISOString().split("T")[0];
 
     // Criar cobranÃ§a PIX
+    const externalRef = cupomId
+      ? `user_${decoded.id}_${Date.now()}_qty${quantity}_cupom${cupomId}`
+      : `user_${decoded.id}_${Date.now()}_qty${quantity}`;
+
     const payment = await asaasService.createPixPayment({
       customer: customer.id,
       billingType: "PIX",
       value: total,
       dueDate: dueDateString,
       description: `Compra de ${quantity} credito(s) - CyberRegistro`,
-      externalReference: `user_${decoded.id}_${Date.now()}_qty${quantity}`,
+      externalReference: externalRef,
     });
 
     return NextResponse.json({

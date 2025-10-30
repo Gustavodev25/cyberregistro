@@ -9,7 +9,13 @@
       "Bash(grep:*)",
       "Bash(dir /B \"c:\\Users\\Gustavo Maldanis\\Desktop\\cyber-registro\\app\\clientes\")",
       "Read(//c/Users/Gustavo Maldanis/Downloads/**)",
-      "Bash(node scripts/migrate.js:*)"
+      "Bash(node scripts/migrate.js:*)",
+      "Bash(node scripts/migrate-cupons.js:*)",
+      "Bash(set -a)",
+      "Bash(. ./.env.local)",
+      "Bash(set +a)",
+      "Bash(node scripts/migrate-anuncios-pdf.js:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
+import PurchaseCreditsModal from '../components/PurchaseCreditsModal';
 
 interface Account {
   id: string;
@@ -30,6 +31,8 @@ export default function Dashboard() {
   const [credits, setCredits] = useState(0);
   const [registrosRealizados, setRegistrosRealizados] = useState(0);
   const [loadingData, setLoadingData] = useState(true);
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [totalGeralDistinct, setTotalGeralDistinct] = useState<number | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -96,6 +99,11 @@ export default function Dashboard() {
         
         console.log('Estatísticas processadas:', stats);
         setAccountsStats(stats);
+        // Usar total geral distinto do backend quando disponível para evitar duplicidade
+        if (typeof statsData.totalGeral !== 'undefined') {
+          const tg = parseInt(statsData.totalGeral);
+          if (!isNaN(tg)) setTotalGeralDistinct(tg);
+        }
       } else {
         console.error('Erro ao buscar estatísticas:', await statsRes.text());
       }
@@ -125,6 +133,23 @@ export default function Dashboard() {
     }
   };
 
+  const refreshCredits = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      };
+      const res = await fetch('/api/credits', { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setCredits(Number(data.credits || 0));
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar créditos:', error);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     router.push('/login');
@@ -144,7 +169,10 @@ export default function Dashboard() {
     );
   }
 
-  const totalAnuncios = accountsStats.reduce((acc, stat) => acc + (Number(stat.total) || 0), 0);
+  const computedTotalAnuncios = accountsStats.reduce((acc, stat) => acc + (Number(stat.total) || 0), 0);
+  const totalAnuncios = (typeof totalGeralDistinct === 'number' && totalGeralDistinct >= 0)
+    ? totalGeralDistinct
+    : computedTotalAnuncios;
   const totalAtivos = accountsStats.reduce((acc, stat) => acc + (Number(stat.active) || 0), 0);
   const totalInativos = accountsStats.reduce((acc, stat) => acc + (Number(stat.paused) || 0), 0);
   const totalEmRevisao = accountsStats.reduce((acc, stat) => acc + (Number(stat.under_review) || 0), 0);
@@ -266,7 +294,7 @@ export default function Dashboard() {
                   </div>
 
                   {/* Card Registros */}
-                  <div className="bg-white rounded-lg border border-neutral-200 p-5">
+                  <div className="relative bg-white rounded-lg border border-neutral-200 p-5 pb-12">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide">Registros</span>
                       <svg className="w-4 h-4 text-[#2F4F7F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -275,10 +303,19 @@ export default function Dashboard() {
                     </div>
                     <p className="text-3xl font-semibold text-neutral-900">{registrosRealizados}</p>
                     <p className="text-xs text-neutral-500 mt-2">Certificados</p>
+                    <Link
+                      href="/certificados"
+                      className="absolute bottom-4 right-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-neutral-200 text-xs font-medium text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
+                    >
+                      Ver certificados
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
                   </div>
 
                   {/* Card Contas */}
-                  <div className="bg-white rounded-lg border border-neutral-200 p-5">
+                  <div className="relative bg-white rounded-lg border border-neutral-200 p-5 pb-12">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide">Contas</span>
                       <svg className="w-4 h-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -287,6 +324,15 @@ export default function Dashboard() {
                     </div>
                     <p className="text-3xl font-semibold text-neutral-900">{accounts.length}</p>
                     <p className="text-xs text-neutral-500 mt-2">Conectadas</p>
+                    <Link
+                      href="/contas-conectadas"
+                      className="absolute bottom-4 right-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-neutral-200 text-xs font-medium text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
+                    >
+                      Ver contas
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
                   </div>
 
                   {/* Card Anúncios */}
@@ -299,6 +345,17 @@ export default function Dashboard() {
                     </div>
                     <p className="text-3xl font-semibold text-neutral-900">{totalAnuncios}</p>
                     <p className="text-xs text-neutral-500 mt-2">Total</p>
+                    <div className="mt-4 flex justify-end">
+                      <Link
+                        href="/anuncios"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-neutral-200 text-xs font-medium text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
+                      >
+                        Ver anúncios
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                    </div>
                   </div>
                 </div>
 
@@ -500,7 +557,7 @@ export default function Dashboard() {
                           <p className="text-xs text-neutral-500">Você tem {credits} créditos</p>
                         </div>
                       </div>
-                      <button className="w-full px-4 py-2 bg-[#2F4F7F] text-white text-sm font-medium rounded-lg hover:bg-[#253B65] transition-colors">
+                      <button onClick={() => setIsPurchaseModalOpen(true)} className="w-full px-4 py-2 bg-[#2F4F7F] text-white text-sm font-medium rounded-lg hover:bg-[#253B65] transition-colors">
                         Adicionar créditos
                       </button>
                     </div>
@@ -544,6 +601,12 @@ export default function Dashboard() {
             )}
           </div>
         </main>
+        {/* Modal de compra de créditos */}
+        <PurchaseCreditsModal
+          isOpen={isPurchaseModalOpen}
+          onClose={() => setIsPurchaseModalOpen(false)}
+          onCreditsUpdated={refreshCredits}
+        />
       </div>
     </div>
   );

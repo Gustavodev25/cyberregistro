@@ -170,6 +170,12 @@ export default function PurchaseCreditsModal({
   const [customerCpfCnpj, setCustomerCpfCnpj] = useState<string>("");
   const [customerPhone, setCustomerPhone] = useState<string>("");
 
+  // Estados do cupom
+  const [cupomCode, setCupomCode] = useState<string>("");
+  const [cupomData, setCupomData] = useState<any>(null);
+  const [cupomDiscount, setCupomDiscount] = useState<number>(0);
+  const [isValidatingCupom, setIsValidatingCupom] = useState<boolean>(false);
+
   const persistValue = useCallback((key: string, value: string) => {
     if (typeof window === "undefined") return;
     try {
@@ -275,12 +281,12 @@ export default function PurchaseCreditsModal({
   }, [quantity]);
 
   const subtotal = unitPrice * quantity;
-  const total = subtotal;
+  const total = subtotal - cupomDiscount;
 
   // Calcular economia comparando com o preço mais alto (primeiro tier)
   const highestPrice = PRICING_TIERS[0].price;
   const priceWithoutDiscount = highestPrice * quantity;
-  const savings = priceWithoutDiscount - total;
+  const savings = priceWithoutDiscount - subtotal;
 
   const goToStep = (nextStep: Step) => {
     if (transitionTimerRef.current) {
@@ -324,8 +330,30 @@ export default function PurchaseCreditsModal({
   };
 
   const handleQuantityChange = (newValue: number) => {
-    if (newValue < 1) return;
+    if (newValue < 1 || isNaN(newValue)) return;
     setQuantity(newValue);
+  };
+
+  const handleQuantityInputChange = (value: string) => {
+    // Permitir campo vazio temporariamente
+    if (value === '') {
+      setQuantity(1);
+      return;
+    }
+
+    // Remover zeros à esquerda e converter para número
+    const numValue = parseInt(value.replace(/^0+/, '') || '0', 10);
+
+    if (!isNaN(numValue) && numValue >= 1) {
+      setQuantity(numValue);
+    }
+  };
+
+  const handleQuantityBlur = () => {
+    // Garantir valor mínimo ao sair do campo
+    if (quantity < 1 || isNaN(quantity)) {
+      setQuantity(1);
+    }
   };
 
   const validateCustomerData = () => {
@@ -397,6 +425,56 @@ export default function PurchaseCreditsModal({
     }
   };
 
+  const handleValidateCupom = async () => {
+    if (!cupomCode.trim()) {
+      showToast("Digite um código de cupom", "error");
+      return;
+    }
+
+    setIsValidatingCupom(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/cupons/validate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          code: cupomCode.trim(),
+          total: subtotal,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        showToast(data.error || "Cupom inválido", "error");
+        setCupomData(null);
+        setCupomDiscount(0);
+        return;
+      }
+
+      setCupomData(data.cupom);
+      setCupomDiscount(data.discount);
+      showToast("Cupom aplicado com sucesso!", "success");
+    } catch (error) {
+      console.error("Erro ao validar cupom:", error);
+      showToast("Erro ao validar cupom", "error");
+      setCupomData(null);
+      setCupomDiscount(0);
+    } finally {
+      setIsValidatingCupom(false);
+    }
+  };
+
+  const handleRemoveCupom = () => {
+    setCupomCode("");
+    setCupomData(null);
+    setCupomDiscount(0);
+  };
+
   const handlePurchase = async () => {
     setIsLoading(true);
 
@@ -438,6 +516,8 @@ export default function PurchaseCreditsModal({
               customerEmail: customerEmail.trim(),
               customerCpfCnpj: sanitizedCpf,
               customerPhone: sanitizedPhone,
+              cupomId: cupomData?.id || null,
+              cupomDiscount: cupomDiscount || 0,
             }),
           });
 
@@ -507,6 +587,8 @@ export default function PurchaseCreditsModal({
               customerEmail: customerEmail.trim(),
               customerCpfCnpj: sanitizedCpf,
               customerPhone: sanitizedPhone,
+              cupomId: cupomData?.id || null,
+              cupomDiscount: cupomDiscount || 0,
               creditCard: {
                 holderName,
                 number: cardNumber.replace(/\s/g, ""),
@@ -676,11 +758,12 @@ export default function PurchaseCreditsModal({
             -
           </button>
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={quantity}
-            onChange={(event) =>
-              handleQuantityChange(parseInt(event.target.value, 10) || 1)
-            }
+            onChange={(event) => handleQuantityInputChange(event.target.value)}
+            onBlur={handleQuantityBlur}
             className="w-20 h-10 text-center text-base font-semibold border border-neutral-200 rounded-md"
           />
           <button
@@ -692,21 +775,79 @@ export default function PurchaseCreditsModal({
         </div>
       </div>
 
-      <div className="bg-white border border-neutral-200 rounded-lg p-4 space-y-2 text-sm">
-        <div className="flex items-center justify-between">
-          <span>Preco unitario</span>
-          <span>R$ {unitPrice.toFixed(2)}</span>
+      <div className="bg-white border border-neutral-200 rounded-lg p-4 space-y-3 text-sm">
+        {/* Preços */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span>Preco unitario</span>
+            <span>R$ {unitPrice.toFixed(2)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Subtotal</span>
+            <span>R$ {subtotal.toFixed(2)}</span>
+          </div>
         </div>
-        <div className="flex items-center justify-between">
-          <span>Subtotal</span>
-          <span>R$ {subtotal.toFixed(2)}</span>
+
+        {/* Campo de Cupom Compacto */}
+        <div className="pt-2 border-t border-neutral-200">
+          {!cupomData ? (
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-neutral-600">
+                Cupom de desconto
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={cupomCode}
+                  onChange={(e) => setCupomCode(e.target.value.toUpperCase())}
+                  placeholder="Código"
+                  className="flex-1 px-2.5 py-1.5 text-xs border border-neutral-200 rounded-md uppercase font-mono focus:ring-2 focus:ring-[#2F4F7F] focus:border-transparent outline-none"
+                  disabled={isValidatingCupom}
+                />
+                <button
+                  onClick={handleValidateCupom}
+                  disabled={isValidatingCupom || !cupomCode.trim()}
+                  className="px-3 py-1.5 text-xs font-medium text-white bg-[#2F4F7F] rounded-md hover:bg-[#253B65] disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  {isValidatingCupom ? "..." : "Aplicar"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md px-2.5 py-1.5">
+              <div className="flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-xs font-mono font-semibold text-green-900">
+                  {cupomData.code}
+                </span>
+              </div>
+              <button
+                onClick={handleRemoveCupom}
+                className="text-xs text-green-700 hover:text-green-900 font-medium"
+              >
+                Remover
+              </button>
+            </div>
+          )}
+
+          {cupomDiscount > 0 && (
+            <div className="flex items-center justify-between text-green-600 font-medium mt-2">
+              <span>✓ Desconto aplicado</span>
+              <span>- R$ {cupomDiscount.toFixed(2)}</span>
+            </div>
+          )}
         </div>
+
+        {/* Total */}
         <div className="pt-2 border-t border-neutral-200 flex items-center justify-between text-base font-semibold">
           <span>Total</span>
           <span>R$ {total.toFixed(2)}</span>
         </div>
+
         {savings > 0 && (
-          <div className="flex items-center justify-between text-sm text-green-600 font-medium pt-1">
+          <div className="flex items-center justify-between text-xs text-green-600 font-medium">
             <span>✓ Você está economizando</span>
             <span>R$ {savings.toFixed(2)}</span>
           </div>

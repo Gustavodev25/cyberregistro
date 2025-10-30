@@ -379,20 +379,17 @@ export async function GET(request: NextRequest) {
           a.mlb_code ILIKE $${paramIndex}
           OR a.mlb_code ILIKE $${paramIndex + 1}
           OR a.title ILIKE $${paramIndex + 2}
-          OR COALESCE(a.seller_custom_field, '') ILIKE $${paramIndex + 3}
         )`);
         params.push(`MLB${numericSearch}%`); // Busca exata começando com MLB+números
         params.push(`%${numericSearch}%`); // Busca pelos números em qualquer parte
         params.push(`%${searchTerm}%`); // Busca no título
-        params.push(`%${searchTerm}%`); // Busca no SKU
-        paramIndex += 4;
+        paramIndex += 3;
       } else {
-        // Busca normal em título, mlb_code, permalink e SKU
+        // Busca normal em título, mlb_code e permalink
         whereClauses.push(`(
           a.title ILIKE $${paramIndex}
           OR a.mlb_code ILIKE $${paramIndex}
           OR COALESCE(a.permalink, '') ILIKE $${paramIndex}
-          OR COALESCE(a.seller_custom_field, '') ILIKE $${paramIndex}
         )`);
         params.push(`%${searchTerm}%`);
         paramIndex++;

@@ -541,7 +541,7 @@ function RegistroPageContent() {
                         {item.registroStatus === 'protegido' && (
                           <div className="flex items-center gap-1.5 text-[10px]">
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-medium">
-                              Protegido
+                              Certificado Gerado
                             </span>
                           </div>
                         )}
