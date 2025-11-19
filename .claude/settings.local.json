@@ -20,7 +20,13 @@
       "Bash(timeout:*)",
       "Bash(node scripts/migrate-anuncios-sku.js:*)",
       "Bash(test:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(dir /B \"c:\\Users\\de\\Desktop\\Zero Holding\\cyberregistro\\sql\")",
+      "Bash(PGPASSWORD=y9Z7xMBv5D5rujprEQeuCaKqHg3rXza3 psql:*)",
+      "Bash(node test-connection.js:*)",
+      "Bash(del:*)",
+      "Bash(tasklist:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

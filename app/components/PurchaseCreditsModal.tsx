@@ -571,7 +571,31 @@ export default function PurchaseCreditsModal({
           }
 
           const { sanitizedCpf, sanitizedPhone } = validated;
-          const [expiryMonth, expiryYear] = expiry.split("/");
+
+          // Validar formato de validade MM/AA
+          const expiryParts = expiry.split("/");
+          if (expiryParts.length !== 2) {
+            showToast("Formato de validade inválido. Use MM/AA", "error");
+            setIsLoading(false);
+            return;
+          }
+
+          const [expiryMonth, expiryYear] = expiryParts;
+          const monthNum = parseInt(expiryMonth, 10);
+          const yearNum = parseInt(expiryYear, 10);
+
+          if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+            showToast("Mês de validade inválido (01-12)", "error");
+            setIsLoading(false);
+            return;
+          }
+
+          if (isNaN(yearNum) || expiryYear.length !== 2) {
+            showToast("Ano de validade inválido (formato: AA)", "error");
+            setIsLoading(false);
+            return;
+          }
+
           const token = localStorage.getItem("token");
 
           const response = await fetch("/api/payments/credit-card", {
@@ -592,7 +616,7 @@ export default function PurchaseCreditsModal({
               creditCard: {
                 holderName,
                 number: cardNumber.replace(/\s/g, ""),
-                expiryMonth,
+                expiryMonth: expiryMonth.padStart(2, '0'),
                 expiryYear: expiryYear ? `20${expiryYear}` : "",
                 ccv: cvv,
               },

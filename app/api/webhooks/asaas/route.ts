@@ -24,6 +24,11 @@ export async function POST(request: NextRequest) {
     switch (event) {
       case "PAYMENT_RECEIVED":
       case "PAYMENT_CONFIRMED":
+        // Ignorar pagamentos sem externalReference (pagamentos duplicados/antigos)
+        if (!payment.externalReference) {
+          console.log("Webhook ignorado - Pagamento sem externalReference:", payment.id);
+          break;
+        }
         await applyPaymentConfirmation(payment);
         break;
 

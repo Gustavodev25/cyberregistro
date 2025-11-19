@@ -7,6 +7,9 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'cyberregistro',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD,
+  ssl: process.env.DB_HOST?.includes('render.com') ? {
+    rejectUnauthorized: false // Necessário para conexões Render
+  } : false,
   max: 20, // número máximo de clientes no pool
   idleTimeoutMillis: 30000, // quanto tempo um cliente pode ficar ocioso antes de ser fechado
   connectionTimeoutMillis: 2000, // quanto tempo esperar ao conectar
