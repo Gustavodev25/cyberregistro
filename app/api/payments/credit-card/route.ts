@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { asaasService } from "@/app/services/asaas";
 import { verify } from "jsonwebtoken";
+import { applyPaymentConfirmation, isPaymentStatusConfirmed } from "@/lib/payments";
 
 const JWT_SECRET = process.env.JWT_SECRET || "";
 
@@ -125,6 +126,25 @@ export async function POST(request: NextRequest) {
         phone: sanitizedPhone,
       },
     });
+
+    console.log("[CREDIT-CARD] Pagamento criado:", {
+      id: payment.id,
+      status: payment.status,
+      value: payment.value,
+    });
+
+    // Se o pagamento for aprovado imediatamente, adicionar créditos ao usuário
+    if (isPaymentStatusConfirmed(payment.status)) {
+      console.log("[CREDIT-CARD] Pagamento confirmado, adicionando créditos ao usuário");
+      try {
+        await applyPaymentConfirmation(payment);
+        console.log("[CREDIT-CARD] Créditos adicionados com sucesso");
+      } catch (error) {
+        console.error("[CREDIT-CARD] Erro ao adicionar créditos:", error);
+        // Não falhamos a requisição, pois o pagamento foi criado
+        // Os créditos podem ser adicionados posteriormente via webhook ou manualmente
+      }
+    }
 
     return NextResponse.json({
       success: true,
