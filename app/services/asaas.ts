@@ -1,5 +1,5 @@
-// Configuração direta da API key (produção)
-const ASAAS_API_KEY = "$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjhjZGUzMzhjLTliZjItNGE3Yi1hZDMxLTgzZGI1ZGRlMmRhZjo6JGFhY2hfNjU1NzQ2MjUtNjZkMC00MzYzLThiNTAtYzA5YTJhMjIyZGQ4";
+// Configuração da API key via variável de ambiente
+const ASAAS_API_KEY = process.env.ASAAS_API_KEY || "";
 const ASAAS_ENV = "production";
 const ASAAS_BASE_URL = "https://www.asaas.com/api/v3";
 
