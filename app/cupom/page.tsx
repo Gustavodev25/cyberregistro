@@ -17,6 +17,7 @@ interface Cupom {
   expires_at: string | null;
   is_active: boolean;
   created_at: string;
+  partner_token: string | null;
 }
 
 export default function CupomPage() {
@@ -456,10 +457,27 @@ export default function CupomPage() {
                         )}
                       </div>
 
-                      <div className="mt-3 pt-3 border-t border-neutral-100">
+                      <div className="mt-3 pt-3 border-t border-neutral-100 flex items-center justify-between">
                         <p className="text-xs text-neutral-400">
                           Criado em {new Date(cupom.created_at).toLocaleDateString('pt-BR')}
                         </p>
+                        
+                        {cupom.partner_token && (
+                          <button
+                            onClick={() => {
+                              const url = `${window.location.origin}/parceiro/cupom/${cupom.partner_token}`;
+                              navigator.clipboard.writeText(url);
+                              showToast('Link do parceiro copiado!', 'success');
+                            }}
+                            className="text-xs font-medium text-[#2F4F7F] hover:text-[#253B65] flex items-center gap-1 transition-colors"
+                            title="Copiar link para parceiro ver métricas"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                            </svg>
+                            Link Parceiro
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

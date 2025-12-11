@@ -79,8 +79,9 @@ async function fetchAllMLListings(mlUserId: string, accessToken: string): Promis
         if (guard > 1000) break; // safety
       }
       return ids; // success via scan
-    } catch (_) {
+    } catch (e: any) {
       // ignore and try offset pagination
+      // console.warn(`Scan failed for user ${mlUserId} status ${statusParam}: ${e.message}`);
     }
 
     // Fallback: offset pagination
@@ -100,17 +101,28 @@ async function fetchAllMLListings(mlUserId: string, accessToken: string): Promis
         guard++;
         if (guard > 400) break; // safety
       }
-    } catch (_) {
+    } catch (e: any) {
+      console.error(`Offset pagination failed for user ${mlUserId} status ${statusParam}:`, e.message);
       // swallow and return whatever we got
     }
     return ids;
   };
 
   // Collect ids across statuses
-  const idGroups = await Promise.all([
-    collectIdsForStatus(undefined),
-    ...statuses.map((s) => collectIdsForStatus(s)),
-  ]);
+  // Use sequential execution to avoid rate limits (9 concurrent requests is too aggressive)
+  const idGroups: string[][] = [];
+  
+  // First try without status
+  idGroups.push(await collectIdsForStatus(undefined));
+
+  // Then try each status sequentially (or with low concurrency)
+  // We can use the existing mapWithConcurrency for this
+  const statusResults = await mapWithConcurrency(statuses, 2, async (s) => {
+    return await collectIdsForStatus(s);
+  });
+  
+  idGroups.push(...statusResults);
+
   const itemIds = Array.from(new Set(idGroups.flat()));
   if (itemIds.length === 0) return [];
 

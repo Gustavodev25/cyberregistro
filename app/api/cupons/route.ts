@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { randomUUID } from 'crypto';
 
 // Função para verificar autenticação
 function verifyAuth(request: NextRequest) {
@@ -39,7 +40,8 @@ export async function GET(request: NextRequest) {
         expires_at,
         is_active,
         created_at,
-        updated_at
+        updated_at,
+        partner_token
       FROM cupons
       ORDER BY created_at DESC`
     );
@@ -112,6 +114,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Criar cupom
+    const partnerToken = randomUUID();
     const result = await pool.query(
       `INSERT INTO cupons (
         code,
@@ -120,8 +123,9 @@ export async function POST(request: NextRequest) {
         max_uses,
         expires_at,
         is_active,
-        uses_count
-      ) VALUES ($1, $2, $3, $4, $5, true, 0)
+        uses_count,
+        partner_token
+      ) VALUES ($1, $2, $3, $4, $5, true, 0, $6)
       RETURNING
         id,
         code,
@@ -131,13 +135,15 @@ export async function POST(request: NextRequest) {
         uses_count,
         expires_at,
         is_active,
-        created_at`,
+        created_at,
+        partner_token`,
       [
         code.toUpperCase().trim(),
         discount_type,
         discount_value,
         max_uses || null,
-        expires_at || null
+        expires_at || null,
+        partnerToken
       ]
     );
 
